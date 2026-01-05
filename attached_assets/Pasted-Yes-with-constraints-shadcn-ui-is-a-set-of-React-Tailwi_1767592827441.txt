@@ -1,0 +1,74 @@
+Yes, with constraints: **shadcn/ui is a set of React + Tailwind components**, so a Starlight (Astro) docs site can use it **if you enable React and Tailwind** and treat shadcn components as **React islands**. shadcn/ui explicitly documents an **Astro** install path, and Starlight supports using UI-framework components in MDX/Markdoc pages. ([Shadcn UI][1]) (accessed 2026-01-05)
+
+### What “works” cleanly
+
+* **Use shadcn components inside Starlight content pages** (best via `.mdx`) and hydrate only where interactive. ([Starlight][2]) (accessed 2026-01-05)
+* **Keep Starlight’s docs chrome** (sidebar, header, search) and just embed shadcn UI for callouts, forms, demos, etc.
+
+### Key gotcha (do this or you will fight it)
+
+Do **not** assemble complex shadcn/Radix component trees directly in `.astro` (or MDX-as-Astro) by scattering subcomponents. Astro’s React integration warns that **children passed from Astro to React are parsed as plain strings**, which breaks libraries expecting real React nodes; there’s an experimental flag, but the pragmatic fix is: **compose shadcn components inside a single `.tsx` wrapper** and mount that wrapper as one island. ([Astro Docs][3]) (accessed 2026-01-05)
+
+### Minimal recipe
+
+1. **Starlight + Tailwind**: use Starlight’s Tailwind setup (it also wires Tailwind `dark:` variants to Starlight’s dark mode). ([Starlight][4]) (accessed 2026-01-05)
+2. **Add React**: `npx astro add react`. ([Astro Docs][3]) (accessed 2026-01-05)
+3. **Install shadcn/ui for Astro**: add tsconfig path alias, run `shadcn@latest init`, then `shadcn@latest add ...`. ([Shadcn UI][1]) (accessed 2026-01-05)
+4. **Use in docs via MDX** and hydrate when interactive (`client:load`, `client:visible`, etc.). ([Astro Docs][5]) (accessed 2026-01-05)
+
+### MWE pattern (recommended)
+
+**React wrapper** `src/components/demos/MyDialog.tsx` (compose all shadcn subcomponents here):
+
+```tsx
+import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle
+} from "@/components/ui/dialog";
+
+export function MyDialog() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>Open</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Demo</DialogTitle>
+        </DialogHeader>
+        Content
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**Starlight doc page** `src/content/docs/example.mdx`:
+
+```mdx
+---
+title: Example
+---
+
+import { MyDialog } from "../../components/demos/MyDialog";
+
+<MyDialog client:load />
+```
+
+MDX + `client:*` is the supported path for UI framework components in Astro content. ([Astro Docs][5]) (accessed 2026-01-05)
+
+### Styling interactions with Starlight
+
+* If Starlight’s default Markdown/content styling fights your shadcn layout, wrap the component with `class="not-content"` (disables Starlight’s content styling in that subtree). ([Starlight][2]) (accessed 2026-01-05)
+* If you want Starlight’s own nav/sidebar to look “shadcn-like”, Starlight supports **overriding built-in components**. ([Starlight][6]) (accessed 2026-01-05)
+
+### One question that can flip the recommendation
+
+Do you need the docs site to stay **0 client JS** (no React islands), or are React-hydrated interactive components acceptable?
+
+[1]: https://ui.shadcn.com/docs/installation/astro "Astro - shadcn/ui"
+[2]: https://starlight.astro.build/components/using-components/ "Using Components | Starlight"
+[3]: https://docs.astro.build/en/guides/integrations-guide/react/ "@astrojs/react | Docs"
+[4]: https://starlight.astro.build/guides/css-and-tailwind/ "CSS & Styling | Starlight"
+[5]: https://docs.astro.build/en/guides/integrations-guide/mdx/ "@astrojs/mdx | Docs"
+[6]: https://starlight.astro.build/guides/overriding-components/ "Overriding Components | Starlight"
