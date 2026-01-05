@@ -1,0 +1,39 @@
+Title: FPF Wiki (Knowledge Base App)
+
+We need a searchable, linkable wiki for the Formal Pencil-and-Paper Framework (FPF) spec. Content must stay notation/tool agnostic and preserve FPF’s structure: Pattern IDs as stable permalinks, and twin labels (Tech vs Plain) for terms.
+
+Current FPF content is hard to navigate as one file. We need fast lookup by PatternID (e.g., A.2.6, F.17), cross-links, and a consistent authoring template so new pages stay consistent.
+
+Discoverability: full-text search + filter by Part (A–G), type (Card/Table/Record/Standard/Spec), tags.
+Structural consistency: every Pattern page uses the same section headings; use “Problem Frame” (not “Context”).
+Twin-register discipline: Terms must store both Tech label and Plain label and display both.
+Stable references: PatternID references in text should auto-link; pages should show backlinks (“Referenced by”).
+Public reading, controlled editing: anyone can read; only admins can create/edit.
+The app should have the following features:
+
+Home page with quick search and Part (A–G) navigation.
+Left sidebar: Part -> list of Artifacts sorted by PatternID.
+Artifact page: renders markdown + a “Referenced by” section.
+Global search: search title, id, body; filters for part/type/tags.
+Admin UI:
+Admin login.
+CRUD for Artifacts.
+“New Pattern” button pre-fills the standard template headings:
+Problem Frame
+Problem
+Forces
+Solution
+Conformance Checklist
+Common Anti-patterns
+Relations
+Rationale (optional)
+Import helper: paste a markdown page; extract PatternID + title + sections into fields.
+Acceptance Tests
+
+Given an Artifact with id “A.2.6”, visiting /A.2.6 loads it and its permalink stays stable.
+Typing “A.2.6” or “F.17” in another page auto-links to the target Artifact.
+Search for a known token returns matching pages and filters work.
+Backlinks list pages that reference the current page.
+Anonymous users can browse and search; only admins can create/edit/publish.
+Seed a few placeholder Artifacts (one per Part A–G plus a couple Terms) to verify flows.
+address changes: Your IA (information architecture) is clear (Parts A–G + “Browse by Part”), but UX will improve most by (1) making navigation and deep-linking stateful, (2) making search and “Recent Updates” resilient and scan-friendly, and (3) standardizing artifact metadata + governance cues. Floot App (accessed 2026-01-05) Top UX/UI changes to implement (ranked) Make “Parts” navigation stateful (active state + breadcrumbs + shareable URLs) Problem: users lose orientation (“where am I?”) and can’t reliably deep-link/share a specific Part or artifact. Change: highlight the active Part in the left nav; add breadcrumbs in the (currently empty) top header area; ensure every view has a stable URL (Part, search, artifact). Unify search into one mental model (global search + scoped search + results page) Problem: multiple entry points to search often create inconsistent behavior and confusion (different placeholders, unclear scope). Change: one global search that always returns a results page; add an optional “scope” (All vs current Part); show result type badges (Pattern, Term, ID, Template), and highlight matches. Fix “Recent Updates” reliability with explicit loading, empty, and error states Problem: skeletons without a clear fallback look like a broken page when the feed is empty or the request fails. Change: after a timeout, switch skeleton to “No updates yet” (empty state) or “Couldn’t load updates. Retry” (error). Add “View all updates” and show date + author per item. Improve browse cards with “at-a-glance” signals Problem: Part cards are readable, but users still have to click to learn what’s inside. Change: add: artifact count, last-updated timestamp, and 2–3 “featured” artifacts per Part (or top tags). This reduces pogo-sticking. Standardize artifact list rows for fast scanning Problem: lists that lack consistent metadata force users to click into pages to decide relevance. Change: in each Part, list artifacts with a fixed row schema: ID, Title, 1-line summary, Status, Last validated/updated, Owner. Add sort (Newest, Most used, Recently validated). Add “How to use this wiki” onboarding and contribution paths Problem: new users don’t know what “Formal Pencil-and-Paper Framework” means in operational terms, or how to add/change content. Change: a pinned “Start here” page on Home with: purpose, how Parts map to workflows, how to search by ID, and a “Suggest change” / “Request artifact” CTA. Accessibility and interaction polish (small changes, big payoff) Problem: knowledge bases are heavy on reading and keyboard navigation; small a11y gaps multiply friction. Change: ensure search inputs have programmatic labels; ensure all icon-only controls have aria-labels; add visible focus states; add “Skip to content”; ensure sidebar toggles are keyboard operable
