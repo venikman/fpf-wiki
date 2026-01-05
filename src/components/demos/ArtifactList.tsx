@@ -1,69 +1,65 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Artifact } from "@/lib/artifacts";
 
 interface ArtifactListProps {
   artifacts: Artifact[];
-  showPart?: boolean;
 }
 
-export function ArtifactList({ artifacts, showPart = false }: ArtifactListProps) {
-  if (artifacts.length === 0) {
+export function ArtifactList({ artifacts }: ArtifactListProps) {
+  if (!artifacts || artifacts.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No artifacts found.
+      <div className="not-content" style={{ textAlign: 'center', padding: '2rem', color: 'var(--sl-color-gray-4)' }}>
+        No artifacts found for this part.
       </div>
     );
   }
 
   return (
-    <div className="not-content grid gap-4">
+    <div className="not-content" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {artifacts.map((artifact) => (
         <a 
           key={artifact.id} 
           href={`/artifacts/${artifact.patternId.toLowerCase().replace(".", "-")}/`}
-          className="block no-underline"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+            padding: '1rem',
+            border: '1px solid var(--sl-color-gray-3)',
+            borderRadius: '0.5rem',
+            background: 'var(--sl-color-bg)',
+            transition: 'border-color 0.2s',
+          }}
+          onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--sl-color-accent)'}
+          onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--sl-color-gray-3)'}
         >
-          <Card className="hover:border-accent-600 transition-colors">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="font-mono">
-                  {artifact.patternId}
-                </Badge>
-                {artifact.status && (
-                  <Badge variant={artifact.status === "Stable" ? "default" : "secondary"}>
-                    {artifact.status}
-                  </Badge>
-                )}
-                {artifact.type && (
-                  <Badge variant="secondary">{artifact.type}</Badge>
-                )}
-                {showPart && (
-                  <Badge variant="outline">Part {artifact.part}</Badge>
-                )}
-              </div>
-              <CardTitle className="text-lg mt-2">{artifact.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {artifact.plainLabel && (
-                <p className="text-sm text-muted-foreground">
-                  {artifact.plainLabel}
-                </p>
-              )}
-              {artifact.tags && artifact.tags.length > 0 && (
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {artifact.tags.slice(0, 4).map((tag) => (
-                    <span 
-                      key={tag} 
-                      className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+            <code style={{ 
+              fontSize: '0.875rem', 
+              padding: '0.25rem 0.5rem', 
+              background: 'var(--sl-color-gray-2)', 
+              borderRadius: '0.25rem' 
+            }}>
+              {artifact.patternId}
+            </code>
+            {artifact.status && (
+              <span style={{
+                fontSize: '0.75rem',
+                padding: '0.125rem 0.5rem',
+                background: artifact.status === 'Stable' ? 'var(--sl-color-accent-low)' : 'var(--sl-color-gray-2)',
+                color: artifact.status === 'Stable' ? 'var(--sl-color-accent-high)' : 'var(--sl-color-gray-5)',
+                borderRadius: '9999px',
+              }}>
+                {artifact.status}
+              </span>
+            )}
+          </div>
+          <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--sl-color-black)' }}>
+            {artifact.title}
+          </h3>
+          {artifact.techLabel && (
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: 'var(--sl-color-gray-5)' }}>
+              {artifact.techLabel}
+            </p>
+          )}
         </a>
       ))}
     </div>

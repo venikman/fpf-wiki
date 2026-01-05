@@ -1,5 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Artifact } from "@/lib/artifacts";
 import { getBacklinks, partNames } from "@/lib/artifacts";
 
@@ -7,12 +5,14 @@ interface ArtifactDetailProps {
   artifact: Artifact;
 }
 
-function MarkdownSection({ title, content }: { title: string; content?: string }) {
+function Section({ title, content }: { title: string; content?: string }) {
   if (!content) return null;
   return (
-    <div className="space-y-2">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+    <div style={{ marginBottom: '1.5rem' }}>
+      <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--sl-color-black)' }}>
+        {title}
+      </h3>
+      <div style={{ whiteSpace: 'pre-wrap', color: 'var(--sl-color-gray-6)' }}>
         {content}
       </div>
     </div>
@@ -22,8 +22,8 @@ function MarkdownSection({ title, content }: { title: string; content?: string }
 export function ArtifactDetail({ artifact }: ArtifactDetailProps) {
   if (!artifact) {
     return (
-      <div className="not-content text-center py-8">
-        <p className="text-muted-foreground">Artifact not found.</p>
+      <div className="not-content" style={{ textAlign: 'center', padding: '2rem', color: 'var(--sl-color-gray-4)' }}>
+        Artifact not found.
       </div>
     );
   }
@@ -31,54 +31,89 @@ export function ArtifactDetail({ artifact }: ArtifactDetailProps) {
   const backlinks = getBacklinks(artifact.patternId);
 
   return (
-    <div className="not-content space-y-6">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" className="font-mono text-base px-3 py-1">
+    <div className="not-content">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <code style={{ 
+          fontSize: '1rem', 
+          padding: '0.25rem 0.75rem', 
+          background: 'var(--sl-color-gray-2)', 
+          borderRadius: '0.25rem',
+          fontWeight: 600,
+        }}>
           {artifact.patternId}
-        </Badge>
+        </code>
         {artifact.status && (
-          <Badge variant={artifact.status === "Stable" ? "default" : "secondary"}>
+          <span style={{
+            fontSize: '0.75rem',
+            padding: '0.25rem 0.75rem',
+            background: artifact.status === 'Stable' ? 'var(--sl-color-accent-low)' : 'var(--sl-color-gray-2)',
+            color: artifact.status === 'Stable' ? 'var(--sl-color-accent-high)' : 'var(--sl-color-gray-5)',
+            borderRadius: '9999px',
+          }}>
             {artifact.status}
-          </Badge>
+          </span>
         )}
         {artifact.type && (
-          <Badge variant="secondary">{artifact.type}</Badge>
+          <span style={{
+            fontSize: '0.75rem',
+            padding: '0.25rem 0.75rem',
+            background: 'var(--sl-color-gray-2)',
+            color: 'var(--sl-color-gray-5)',
+            borderRadius: '9999px',
+          }}>
+            {artifact.type}
+          </span>
         )}
-        <Badge variant="outline">
+        <span style={{
+          fontSize: '0.75rem',
+          padding: '0.25rem 0.75rem',
+          border: '1px solid var(--sl-color-gray-3)',
+          borderRadius: '9999px',
+          color: 'var(--sl-color-gray-5)',
+        }}>
           Part {artifact.part}: {partNames[artifact.part]}
-        </Badge>
+        </span>
       </div>
 
       {(artifact.techLabel || artifact.plainLabel) && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">
-              Twin Labels
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div style={{ 
+          padding: '1rem', 
+          background: 'var(--sl-color-gray-1)', 
+          borderRadius: '0.5rem',
+          marginBottom: '1.5rem',
+        }}>
+          <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--sl-color-gray-4)', marginBottom: '0.75rem' }}>
+            Twin Labels
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             {artifact.techLabel && (
               <div>
-                <span className="text-xs text-muted-foreground">Technical</span>
-                <p className="font-medium">{artifact.techLabel}</p>
+                <span style={{ fontSize: '0.75rem', color: 'var(--sl-color-gray-4)' }}>Technical</span>
+                <p style={{ margin: 0, fontWeight: 500, color: 'var(--sl-color-black)' }}>{artifact.techLabel}</p>
               </div>
             )}
             {artifact.plainLabel && (
               <div>
-                <span className="text-xs text-muted-foreground">Plain Language</span>
-                <p className="font-medium">{artifact.plainLabel}</p>
+                <span style={{ fontSize: '0.75rem', color: 'var(--sl-color-gray-4)' }}>Plain Language</span>
+                <p style={{ margin: 0, fontWeight: 500, color: 'var(--sl-color-black)' }}>{artifact.plainLabel}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {artifact.tags && artifact.tags.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           {artifact.tags.map((tag) => (
             <span
               key={tag}
-              className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground"
+              style={{
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.5rem',
+                background: 'var(--sl-color-gray-2)',
+                borderRadius: '9999px',
+                color: 'var(--sl-color-gray-5)',
+              }}
             >
               {tag}
             </span>
@@ -86,38 +121,39 @@ export function ArtifactDetail({ artifact }: ArtifactDetailProps) {
         </div>
       )}
 
-      <div className="space-y-6">
-        <MarkdownSection title="Problem Frame" content={artifact.problemFrame} />
-        <MarkdownSection title="Problem" content={artifact.problem} />
-        <MarkdownSection title="Forces" content={artifact.forces} />
-        <MarkdownSection title="Solution" content={artifact.solution} />
-        <MarkdownSection title="Conformance Checklist" content={artifact.conformanceChecklist} />
-        <MarkdownSection title="Anti-patterns" content={artifact.antiPatterns} />
-        <MarkdownSection title="Relations" content={artifact.relations} />
-        <MarkdownSection title="Rationale" content={artifact.rationale} />
-        <MarkdownSection title="Body" content={artifact.body} />
-      </div>
+      <Section title="Problem Frame" content={artifact.problemFrame} />
+      <Section title="Problem" content={artifact.problem} />
+      <Section title="Forces" content={artifact.forces} />
+      <Section title="Solution" content={artifact.solution} />
+      <Section title="Conformance Checklist" content={artifact.conformanceChecklist} />
+      <Section title="Anti-patterns" content={artifact.antiPatterns} />
+      <Section title="Relations" content={artifact.relations} />
+      <Section title="Rationale" content={artifact.rationale} />
+      <Section title="Body" content={artifact.body} />
 
       {backlinks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Referenced By</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {backlinks.map((bl) => (
-                <li key={bl.id}>
-                  <a
-                    href={`/artifacts/${bl.patternId.toLowerCase().replace(".", "-")}/`}
-                    className="text-accent-600 hover:underline"
-                  >
-                    <span className="font-mono">{bl.patternId}</span> - {bl.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <div style={{ 
+          padding: '1rem', 
+          border: '1px solid var(--sl-color-gray-3)', 
+          borderRadius: '0.5rem',
+          marginTop: '2rem',
+        }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--sl-color-black)' }}>
+            Referenced By
+          </h4>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+            {backlinks.map((bl) => (
+              <li key={bl.id} style={{ marginBottom: '0.5rem' }}>
+                <a
+                  href={`/artifacts/${bl.patternId.toLowerCase().replace(".", "-")}/`}
+                  style={{ color: 'var(--sl-color-accent)' }}
+                >
+                  <code>{bl.patternId}</code> - {bl.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
