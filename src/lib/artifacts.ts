@@ -192,12 +192,32 @@ export function searchArtifacts(query: string): Artifact[] {
   );
 }
 
+const ALPHANUMERIC = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+function isWordBoundary(char: string | undefined): boolean {
+  return !char || !ALPHANUMERIC.includes(char);
+}
+
+// Check if text contains patternId as a whole word (prevents "A.1" matching "A.10")
+function containsWholeWord(text: string, word: string): boolean {
+  let index = text.indexOf(word);
+  while (index !== -1) {
+    const before = text[index - 1];
+    const after = text[index + word.length];
+    if (isWordBoundary(before) && isWordBoundary(after)) {
+      return true;
+    }
+    index = text.indexOf(word, index + 1);
+  }
+  return false;
+}
+
 export function getBacklinks(patternId: string): Artifact[] {
   return artifacts.filter((a) => {
     if (a.patternId === patternId) return false;
     const searchText = [a.relations, a.problem, a.solution, a.body, a.references?.join(" ")]
       .filter(Boolean)
       .join(" ");
-    return searchText.includes(patternId);
+    return containsWholeWord(searchText, patternId);
   });
 }
