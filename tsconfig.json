@@ -1,6 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": ["src/**/*", "shared/**/*"],
+  "include": ["src/**/*", "server/**/*", "script/**/*"],
   "exclude": ["node_modules", "build", "dist"],
   "compilerOptions": {
     "jsx": "react-jsx",
@@ -8,8 +8,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@shared/*": ["./shared/*"]
+      "@components/*": ["./src/components/*"]
     }
   }
 }

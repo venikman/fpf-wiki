@@ -3,15 +3,9 @@ import starlight from '@astrojs/starlight';
 import react from '@astrojs/react';
 
 export default defineConfig({
-  server: { 
-    port: 5000, 
+  server: {
+    port: 5000,
     host: '0.0.0.0',
-    allowedHosts: ['.replit.dev', '.kirk.replit.dev'],
-  },
-  vite: {
-    server: {
-      allowedHosts: ['.replit.dev', '.kirk.replit.dev'],
-    },
   },
   integrations: [
     starlight({
