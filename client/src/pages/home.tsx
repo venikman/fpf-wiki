@@ -81,10 +81,7 @@ export default function Home() {
           ) : recentArtifacts.length === 0 ? (
             <div className="text-center py-12 bg-muted/50 rounded-lg">
               <i className="ti ti-files-off text-4xl text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No artifacts yet.</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add patterns through the Admin panel to get started.
-              </p>
+              <p className="text-muted-foreground">No artifacts loaded.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

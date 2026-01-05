@@ -107,26 +107,18 @@ export default function ArtifactPage() {
 
             {/* Header */}
             <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="outline" className="font-mono text-lg px-3 py-1">
-                    {artifact.patternId}
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge variant="outline" className="font-mono text-lg px-3 py-1">
+                  {artifact.patternId}
+                </Badge>
+                {artifact.status && (
+                  <Badge
+                    variant={artifact.status === "Stable" ? "default" : "secondary"}
+                    className={artifact.status === "Stable" ? "bg-primary" : ""}
+                  >
+                    {artifact.status}
                   </Badge>
-                  {artifact.status && (
-                    <Badge
-                      variant={artifact.status === "Stable" ? "default" : "secondary"}
-                      className={artifact.status === "Stable" ? "bg-primary" : ""}
-                    >
-                      {artifact.status}
-                    </Badge>
-                  )}
-                </div>
-                <Link href={`/admin/edit/${artifact.patternId}`}>
-                  <Button variant="outline" size="sm" data-testid="button-edit-artifact">
-                    <i className="ti ti-edit mr-2" />
-                    Edit
-                  </Button>
-                </Link>
+                )}
               </div>
 
               <h1 className="text-3xl font-bold text-foreground">{artifact.title}</h1>
