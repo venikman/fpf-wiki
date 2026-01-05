@@ -3,15 +3,15 @@ title: "Part G: Operations Cluster"
 description: "Operational patterns for project execution and delivery"
 ---
 
+import { ArtifactList } from "../../../components/demos/ArtifactList";
+import { getArtifactsByPart } from "../../../lib/artifacts";
+
 Part G addresses operational concerns including deployment, monitoring, and maintenance.
-
-## Patterns in Part G
-
-| Pattern ID | Title | Type | Status |
-|------------|-------|------|--------|
-| G.1 | Deployment Checklist | Table | Stable |
-| G.2 | Operations Runbook | Standard | Draft |
 
 ## Overview
 
 The Operations Cluster provides patterns for the operational phase of projects, ensuring smooth transitions from development to production and ongoing maintenance.
+
+## Patterns in Part G
+
+<ArtifactList client:load artifacts={getArtifactsByPart("G")} />

@@ -3,15 +3,15 @@ title: "Part C: Engineering Cluster"
 description: "Technical engineering patterns and implementation guidelines"
 ---
 
+import { ArtifactList } from "../../../components/demos/ArtifactList";
+import { getArtifactsByPart } from "../../../lib/artifacts";
+
 Part C provides patterns for technical implementation and engineering practices.
-
-## Patterns in Part C
-
-| Pattern ID | Title | Type | Status |
-|------------|-------|------|--------|
-| C.1 | Technical Specification | Spec | Stable |
-| C.2 | Implementation Guide | Standard | Draft |
 
 ## Overview
 
 The Engineering Cluster bridges the gap between project formalization and technical implementation. It provides concrete patterns for translating abstract project artifacts into working systems.
+
+## Patterns in Part C
+
+<ArtifactList client:load artifacts={getArtifactsByPart("C")} />

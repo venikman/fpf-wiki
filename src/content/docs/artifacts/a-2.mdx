@@ -1,0 +1,9 @@
+---
+title: "A.2: Artifact Registry"
+description: "Artifact Catalog System - A central list of all project items"
+---
+
+import { ArtifactDetail } from "../../../components/demos/ArtifactDetail";
+import { getArtifactByPatternId } from "../../../lib/artifacts";
+
+<ArtifactDetail client:load artifact={getArtifactByPatternId("A.2")} />

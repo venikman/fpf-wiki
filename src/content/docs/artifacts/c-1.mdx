@@ -1,0 +1,9 @@
+---
+title: "C.1: Technical Specification"
+description: "Engineering Specification Document - Technical details document"
+---
+
+import { ArtifactDetail } from "../../../components/demos/ArtifactDetail";
+import { getArtifactByPatternId } from "../../../lib/artifacts";
+
+<ArtifactDetail client:load artifact={getArtifactByPatternId("C.1")} />

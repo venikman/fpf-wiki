@@ -24,6 +24,11 @@ export default defineConfig({
             { label: 'Part G: Operations Cluster', link: '/parts/g/' },
           ],
         },
+        {
+          label: 'Artifacts',
+          collapsed: true,
+          autogenerate: { directory: 'artifacts' },
+        },
       ],
       customCss: ['./src/styles/custom.css'],
     }),

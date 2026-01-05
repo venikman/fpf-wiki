@@ -1,0 +1,9 @@
+---
+title: "B.2: Knowledge Graph"
+description: "Semantic Knowledge Network - Connected knowledge map"
+---
+
+import { ArtifactDetail } from "../../../components/demos/ArtifactDetail";
+import { getArtifactByPatternId } from "../../../lib/artifacts";
+
+<ArtifactDetail client:load artifact={getArtifactByPatternId("B.2")} />
