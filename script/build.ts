@@ -59,14 +59,23 @@ function serveFile(res, filePath) {
 
 const server = http.createServer((req, res) => {
   let urlPath = req.url.split('?')[0];
-  
+
   // Handle trailing slashes and default to index.html
   if (urlPath.endsWith('/')) {
     urlPath += 'index.html';
   }
-  
+
   let filePath = path.join(DIST_DIR, urlPath);
-  
+
+  // Security: Prevent path traversal attacks
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(DIST_DIR)) {
+    res.writeHead(403, { 'Content-Type': 'text/html' });
+    res.end('<h1>403 Forbidden</h1>');
+    return;
+  }
+  filePath = resolvedPath;
+
   // Check if file exists, if not try adding .html or /index.html
   if (!fs.existsSync(filePath)) {
     if (fs.existsSync(filePath + '.html')) {
@@ -75,7 +84,7 @@ const server = http.createServer((req, res) => {
       filePath = path.join(filePath, 'index.html');
     }
   }
-  
+
   serveFile(res, filePath);
 });
 

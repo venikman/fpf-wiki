@@ -193,11 +193,15 @@ export function searchArtifacts(query: string): Artifact[] {
 }
 
 export function getBacklinks(patternId: string): Artifact[] {
+  // Use word boundary regex to prevent false matches (e.g., "A.1" matching "A.10")
+  const escapedId = patternId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`\\b${escapedId}\\b`);
+
   return artifacts.filter((a) => {
     if (a.patternId === patternId) return false;
     const searchText = [a.relations, a.problem, a.solution, a.body, a.references?.join(" ")]
       .filter(Boolean)
       .join(" ");
-    return searchText.includes(patternId);
+    return pattern.test(searchText);
   });
 }

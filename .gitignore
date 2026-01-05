@@ -5,6 +5,7 @@ server/public
 vite.config.ts.*
 *.tar.gz
 
-# Generated JS files from tsx
-*.js
-!astro.config.mjs
+# Generated JS files from tsx (TypeScript execution)
+server/**/*.js
+script/**/*.js
+src/**/*.js
