@@ -7,11 +7,11 @@ export default defineConfig({
   server: { 
     port: 5000, 
     host: '0.0.0.0',
-    allowedHosts: ['*'],
+    allowedHosts: ['.replit.dev', '.kirk.replit.dev'],
   },
   vite: {
     server: {
-      allowedHosts: true,
+      allowedHosts: ['.replit.dev', '.kirk.replit.dev'],
     },
   },
   integrations: [
