@@ -9,6 +9,11 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: ['*'],
   },
+  vite: {
+    server: {
+      allowedHosts: true,
+    },
+  },
   integrations: [
     starlight({
       title: 'FPF Wiki',
