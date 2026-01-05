@@ -11,14 +11,12 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Search from "@/pages/search";
 import ArtifactPage from "@/pages/artifact";
-import Admin from "@/pages/admin";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
-      <Route path="/admin" component={Admin} />
       <Route path="/:patternId" component={ArtifactPage} />
       <Route component={NotFound} />
     </Switch>

@@ -164,16 +164,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild data-active={isActive("/admin")}>
-              <Link href="/admin" data-testid="link-admin">
-                <i className="ti ti-settings" />
-                <span>Admin</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="text-xs text-muted-foreground text-center">
+          FPF v1.0 - Read Only
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

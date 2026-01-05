@@ -1,16 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtifactSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Seed initial data if database is empty
-  await storage.seedInitialData();
-
-  // Get all artifacts
+  // Get all artifacts (with optional filters)
   app.get("/api/artifacts", async (req, res) => {
     try {
       const { query, part, type } = req.query;
@@ -25,13 +21,13 @@ export async function registerRoutes(
     }
   });
 
-  // Get artifact by pattern ID (for /api/artifacts/:patternId route)
+  // Get artifact by pattern ID
   app.get("/api/artifacts/:patternId", async (req, res) => {
     try {
       const { patternId } = req.params;
       const decodedId = decodeURIComponent(patternId);
       
-      // First try to find by UUID
+      // First try to find by ID
       let artifact = await storage.getArtifactById(decodedId);
       
       // If not found, try by pattern ID
@@ -46,70 +42,6 @@ export async function registerRoutes(
       res.json(artifact);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artifact" });
-    }
-  });
-
-  // Create artifact
-  app.post("/api/artifacts", async (req, res) => {
-    try {
-      const parsed = insertArtifactSchema.safeParse(req.body);
-      
-      if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid artifact data", details: parsed.error.errors });
-      }
-
-      // Check if pattern ID already exists
-      const existing = await storage.getArtifactByPatternId(parsed.data.patternId);
-      if (existing) {
-        return res.status(409).json({ error: "Pattern ID already exists" });
-      }
-
-      const artifact = await storage.createArtifact(parsed.data);
-      res.status(201).json(artifact);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create artifact" });
-    }
-  });
-
-  // Update artifact
-  app.patch("/api/artifacts/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body;
-
-      // If changing pattern ID, check it doesn't already exist
-      if (updates.patternId) {
-        const existing = await storage.getArtifactByPatternId(updates.patternId);
-        if (existing && existing.id !== id) {
-          return res.status(409).json({ error: "Pattern ID already exists" });
-        }
-      }
-
-      const artifact = await storage.updateArtifact(id, updates);
-      
-      if (!artifact) {
-        return res.status(404).json({ error: "Artifact not found" });
-      }
-      
-      res.json(artifact);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update artifact" });
-    }
-  });
-
-  // Delete artifact
-  app.delete("/api/artifacts/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const deleted = await storage.deleteArtifact(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Artifact not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete artifact" });
     }
   });
 
