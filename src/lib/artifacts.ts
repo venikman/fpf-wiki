@@ -192,15 +192,10 @@ export function searchArtifacts(query: string): Artifact[] {
   );
 }
 
-// Check if character is a word boundary (not alphanumeric)
+const ALPHANUMERIC = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
 function isWordBoundary(char: string | undefined): boolean {
-  if (!char) return true;
-  const code = char.charCodeAt(0);
-  // Check if NOT a-z, A-Z, or 0-9
-  const isLower = code >= 97 && code <= 122;
-  const isUpper = code >= 65 && code <= 90;
-  const isDigit = code >= 48 && code <= 57;
-  return !(isLower || isUpper || isDigit);
+  return !char || !ALPHANUMERIC.includes(char);
 }
 
 // Check if text contains patternId as a whole word (prevents "A.1" matching "A.10")
