@@ -531,7 +531,7 @@ export async function upsertEpistemeCard(query, card) {
             formality_level = excluded.formality_level,
             assurance_level = excluded.assurance_level,
             updated_at = datetime('now')
-         RETURNING id, (changes() = 0) as created`,
+         RETURNING id, (created_at = updated_at) as created`,
         [
             card.kind_ref,
             card.bounded_context_ref,
