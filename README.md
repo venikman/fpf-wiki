@@ -65,6 +65,24 @@ Create a `.env` file:
 DATABASE_URL=libsql://your-database.turso.io?authToken=your-token
 ```
 
+## Automation
+
+- A Pages workflow (`.github/workflows/upstream-fpf-pages.yml`) builds a simple snapshot page from the latest `ailev/FPF` `main` commit. It runs on:
+  - `repository_dispatch` with type `ailev-fpf-main` (recommended trigger from `ailev/FPF` on each `main` push)
+  - manual `workflow_dispatch`
+  - a 6-hour schedule as a fallback
+- To trigger from `ailev/FPF`, add a step in that repository that sends a dispatch using a `repo`-scoped token:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $DISPATCH_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/venikman/fpf-wiki/dispatches \
+  -d '{"event_type":"ailev-fpf-main","client_payload":{"source_repo":"ailev/FPF","ref":"main"}}'
+```
+
+The published snapshot is available via GitHub Pages for this repository after the workflow completes.
+
 ## License
 
 MIT
