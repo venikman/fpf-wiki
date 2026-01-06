@@ -4,9 +4,8 @@ A knowledge base for the **First Principles Framework (FPF)** - a specification 
 
 ## Project Structure
 
-```
+```text
 fpf-wiki/
-├── FPF.md                  # Complete FPF specification (~43K lines)
 ├── fpf.spec-model.v1.js    # ESM parser for FPF markdown
 ├── fpf.schema.v1.sql       # SQLite/Turso database schema
 ├── workshop-method.md      # Decision Desktop methodology
@@ -46,16 +45,14 @@ await ingestFpfSpecMarkdown(query, { doc_ref: 'FPF-Spec(4)', title: 'FPF-Spec (4
 ### Database Schema (`fpf.schema.v1.sql`)
 
 SQLite/Turso schema with two phases:
-1. **Spec ingestion**: `spec_docs`, `spec_sections`, `spec_clauses`, `spec_xrefs`
-2. **Generic FPF storage**: `fpf_universes`, `fpf_holons`, `fpf_claims`, `fpf_evidence`
+1. **Spec ingestion**: `fpf_doc`, `fpf_section`, `fpf_clause`, `fpf_xref`
+2. **Generic FPF storage**: `fpf_episteme_kind`, `fpf_episteme_kind_slot`, `fpf_episteme_card`, `fpf_episteme_card_slot`
+
+FTS5 full-text search tables are created best-effort for content search.
 
 ## Setup
 
 ```bash
-# Install dependencies (if adding a runtime later)
-bun install
-
-# Initialize database (requires Turso CLI or SQLite)
 turso db create fpf-wiki
 turso db shell fpf-wiki < fpf.schema.v1.sql
 ```

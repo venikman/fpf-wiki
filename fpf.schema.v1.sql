@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_section_doc ON fpf_section(doc_id);
 CREATE INDEX IF NOT EXISTS idx_section_ref ON fpf_section(ref);
 CREATE INDEX IF NOT EXISTS idx_section_parent ON fpf_section(parent_id);
 
--- CC Clauses (ConformanCreate a to-do MD file and add to it plants that I want to create in F-Sharp: PBB testing, non-deterministic testing, to make sure that FPF was completely migrated into Tours.ce Clauses) extracted from patterns like CC-A.1-1, CC-C.2.1-4
+-- CC Clauses (Conformance Clauses) extracted from patterns like CC-A.1-1, CC-C.2.1-4
 -- Same clause may appear in multiple places in the document
 CREATE TABLE IF NOT EXISTS fpf_clause (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

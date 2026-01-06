@@ -95,8 +95,8 @@ function extractClause(line, lineNum) {
     // Normalize dashes (em-dash, en-dash, hyphen variations)
     const normalized = line.replace(/[‑–—]/g, '-');
 
-    // Pattern: CC-X.Y-N or CC-X.Y.Z-N
-    const ccMatch = normalized.match(/\*?\*?CC-([A-Z][A-Z0-9.]*-\d+)(?:\s*\([^)]*\))?\*?\*?\.?\s*[|]?\s*(.+)/i);
+    // Pattern: CC-X.Y-N or CC-X.Y.Z-N (handles optional bold markdown)
+    const ccMatch = normalized.match(/\**CC-([A-Z][A-Z0-9.]*-\d+)(?:\s*\([^)]*\))?\**\.?\s*[|]?\s*(.+)/i);
 
     if (ccMatch) {
         const code = `CC-${ccMatch[1]}`;
@@ -222,7 +222,6 @@ export function parseFpfSpecMarkdown(md, options) {
     let sectionStack = []; // Stack for tracking hierarchy
     let sectionOrd = 0;
     let sectionContent = [];
-    let sectionStartLine = 0;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -239,7 +238,6 @@ export function parseFpfSpecMarkdown(md, options) {
             }
 
             const level = headingMatch[1].length;
-            const headingText = headingMatch[2].trim();
             const { ref, title: sectionTitle } = parseHeading(line);
 
             // Generate a ref if none found
@@ -266,7 +264,6 @@ export function parseFpfSpecMarkdown(md, options) {
             sections.push(currentSection);
             sectionStack.push({ level, ord: sectionOrd });
             sectionContent = [];
-            sectionStartLine = lineNum;
 
         } else {
             // Accumulate content
@@ -351,6 +348,9 @@ export async function migrateFpfSchemaV1(query, schemaSQL) {
         .replace(/--.*$/gm, '');            // Remove line comments
 
     // Split on semicolons, keeping statements intact
+    // NOTE: This simple parsing approach assumes no semicolons inside string literals
+    // or complex statements like triggers. For more complex schemas, consider using
+    // a proper SQL parser or splitting on statement boundaries differently.
     const statements = cleanedSQL
         .split(';')
         .map(s => s.trim())
@@ -358,12 +358,6 @@ export async function migrateFpfSchemaV1(query, schemaSQL) {
 
     for (const stmt of statements) {
         try {
-            // Check if this is an FTS statement
-            const isFTS = stmt.includes('fts5') ||
-                          stmt.includes('fpf_section_fts') ||
-                          stmt.includes('fpf_clause_fts') ||
-                          stmt.includes('fpf_episteme_card_fts');
-
             await query(stmt);
         } catch (err) {
             const errMsg = err.message || String(err);
@@ -520,65 +514,44 @@ export async function ingestFpfSpecMarkdown(query, options) {
 export async function upsertEpistemeCard(query, card) {
     const contentHash = sha256(card.content);
 
-    // Check for existing card with same identity
-    const existing = await query(
-        `SELECT id FROM fpf_episteme_card
-         WHERE bounded_context_ref = ? AND described_entity_ref = ? AND content_hash = ?`,
-        [card.bounded_context_ref, card.described_entity_ref, contentHash]
+    // Use INSERT...ON CONFLICT for atomic upsert (avoids race conditions)
+    const result = await query(
+        `INSERT INTO fpf_episteme_card
+         (kind_ref, bounded_context_ref, described_entity_ref, grounding_holon_ref,
+          viewpoint_ref, reference_scheme, content, content_hash, meta_json,
+          formality_level, assurance_level)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(bounded_context_ref, described_entity_ref, content_hash) DO UPDATE SET
+            kind_ref = excluded.kind_ref,
+            grounding_holon_ref = excluded.grounding_holon_ref,
+            viewpoint_ref = excluded.viewpoint_ref,
+            reference_scheme = excluded.reference_scheme,
+            content = excluded.content,
+            meta_json = excluded.meta_json,
+            formality_level = excluded.formality_level,
+            assurance_level = excluded.assurance_level,
+            updated_at = datetime('now')
+         RETURNING id, (changes() = 0) as created`,
+        [
+            card.kind_ref,
+            card.bounded_context_ref,
+            card.described_entity_ref,
+            card.grounding_holon_ref || null,
+            card.viewpoint_ref || null,
+            card.reference_scheme || null,
+            card.content,
+            contentHash,
+            card.meta ? JSON.stringify(card.meta) : null,
+            card.formality_level || null,
+            card.assurance_level || null
+        ]
     );
 
-    if (existing.rows && existing.rows.length > 0) {
-        // Update existing
-        const id = existing.rows[0].id;
-        await query(
-            `UPDATE fpf_episteme_card SET
-                kind_ref = ?,
-                grounding_holon_ref = ?,
-                viewpoint_ref = ?,
-                reference_scheme = ?,
-                content = ?,
-                meta_json = ?,
-                formality_level = ?,
-                assurance_level = ?,
-                updated_at = datetime('now')
-             WHERE id = ?`,
-            [
-                card.kind_ref,
-                card.grounding_holon_ref || null,
-                card.viewpoint_ref || null,
-                card.reference_scheme || null,
-                card.content,
-                card.meta ? JSON.stringify(card.meta) : null,
-                card.formality_level || null,
-                card.assurance_level || null,
-                id
-            ]
-        );
-        return { id, created: false };
-    } else {
-        // Insert new
-        const result = await query(
-            `INSERT INTO fpf_episteme_card
-             (kind_ref, bounded_context_ref, described_entity_ref, grounding_holon_ref,
-              viewpoint_ref, reference_scheme, content, content_hash, meta_json,
-              formality_level, assurance_level)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                card.kind_ref,
-                card.bounded_context_ref,
-                card.described_entity_ref,
-                card.grounding_holon_ref || null,
-                card.viewpoint_ref || null,
-                card.reference_scheme || null,
-                card.content,
-                contentHash,
-                card.meta ? JSON.stringify(card.meta) : null,
-                card.formality_level || null,
-                card.assurance_level || null
-            ]
-        );
-        return { id: result.lastInsertRowid || result.lastRowId, created: true };
-    }
+    const row = result.rows?.[0] || {};
+    return {
+        id: row.id || result.lastInsertRowid || result.lastRowId,
+        created: Boolean(row.created)
+    };
 }
 
 /**

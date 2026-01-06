@@ -80,10 +80,13 @@ let ``roundtrip hash property`` (section: Section) =
     let stored = db.GetSection(section.Id)
     sha256(stored.Text) = stored.ContentHash
 
-// Example generator
+// Example generator (using gen computation expression for proper composition)
 let genSectionRef =
-    Gen.elements ['A'..'G']
-    |> Gen.map (fun c -> sprintf "%c.%d" c (Gen.choose(1, 20)))
+    gen {
+        let! c = Gen.elements ['A'..'G']
+        let! n = Gen.choose(1, 20)
+        return sprintf "%c.%d" c n
+    }
 ```
 
 ---
