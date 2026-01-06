@@ -70,6 +70,7 @@ DATABASE_URL=libsql://your-database.turso.io?authToken=your-token
 - A Pages workflow (`.github/workflows/upstream-fpf-pages.yml`) builds a simple snapshot page from the latest `ailev/FPF` `main` commit. It runs on:
   - `repository_dispatch` with type `ailev-fpf-main` (recommended trigger from `ailev/FPF` on each `main` push)
   - manual `workflow_dispatch`
+- The workflow uses [Bun](https://bun.sh/) (installed via `oven-sh/setup-bun`) for fetching commit metadata and generating the HTML snapshot.
 - To trigger from `ailev/FPF`, add a step in that repository that sends a dispatch using a `repo`-scoped token:
 
 ```bash
