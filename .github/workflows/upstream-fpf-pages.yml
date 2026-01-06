@@ -33,65 +33,47 @@ jobs:
       - name: Fetch latest ailev/FPF main commit
         id: upstream
         run: |
-          bun -e "
-            import { appendFileSync } from 'node:fs';
-            import { env } from 'bun';
+          set -euo pipefail
 
-            const url = 'https://api.github.com/repos/ailev/FPF/commits/main';
-            const headers = {
-              'User-Agent': 'venikman-fpf-wiki',
-              Accept: 'application/vnd.github+json',
-            };
+          url="https://api.github.com/repos/ailev/FPF/commits/main"
+          auth_header=()
+          if [ -n "${GITHUB_TOKEN:-}" ]; then
+            auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+          fi
 
-            if (env.GITHUB_TOKEN) {
-              headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-            }
+          response="$(curl -fsSL "${auth_header[@]}" \
+            -H "User-Agent: venikman-fpf-wiki" \
+            -H "Accept: application/vnd.github+json" \
+            "$url" || true)"
 
-            const fail = (message) => {
-              console.error(message);
-              process.exit(1);
-            };
+          if [ -z "$response" ]; then
+            echo "::error::Failed to fetch upstream commit (empty response)"
+            exit 1
+          fi
 
-            let data;
-            try {
-              const resp = await fetch(url, { headers });
-              const detail = await resp.text();
-              if (!resp.ok) {
-                fail(`::error::Failed to fetch upstream commit (status ${resp.status}): ${detail}`);
-              }
-              try {
-                data = JSON.parse(detail);
-              } catch (error) {
-                fail(`::error::Failed to parse upstream commit response: ${error}`);
-              }
-            } catch (error) {
-              fail(`::error::Failed to fetch upstream commit (network): ${error}`);
-            }
+          sha="$(printf '%s' "$response" | jq -r '.sha // empty')"
+          author="$(printf '%s' "$response" | jq -r '.commit.author.name // empty')"
+          date="$(printf '%s' "$response" | jq -r '.commit.author.date // empty')"
+          html_url="$(printf '%s' "$response" | jq -r '.html_url // empty')"
+          message="$(printf '%s' "$response" | jq -r '.commit.message // empty')"
+          fetched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-            const sha = data?.sha ?? '';
-            const commit = data?.commit ?? {};
-            const authorInfo = commit.author ?? {};
+          if [ -z "$sha" ]; then
+            echo "::error::Failed to parse upstream commit (missing sha)"
+            exit 1
+          fi
 
-            const message = commit.message ?? '';
-            const author = authorInfo.name ?? '';
-            const date = authorInfo.date ?? '';
-            const htmlUrl = data?.html_url ?? '';
-            const fetchedAt = new Date().toISOString();
-
-            const delimiter = 'EOF_COMMIT_MESSAGE';
-            const lines = [
-              `sha=${sha}`,
-              `author=${author}`,
-              `date=${date}`,
-              `html_url=${htmlUrl}`,
-              `fetched_at=${fetchedAt}`,
-              `message<<${delimiter}`,
-              message.endsWith('\\n') ? message : `${message}\\n`,
-              delimiter,
-            ];
-
-            appendFileSync(env.GITHUB_OUTPUT, lines.join('\\n'), 'utf8');
-          "
+          delimiter="EOF_COMMIT_MESSAGE"
+          {
+            echo "sha=$sha"
+            echo "author=$author"
+            echo "date=$date"
+            echo "html_url=$html_url"
+            echo "fetched_at=$fetched_at"
+            echo "message<<$delimiter"
+            printf "%s\n" "$message"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
