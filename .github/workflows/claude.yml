@@ -38,7 +38,7 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
           # The action automatically detects @claude mentions and responds
           # No explicit prompt needed - it uses the comment content
           claude_args: "--max-turns 10"
