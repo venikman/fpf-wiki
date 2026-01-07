@@ -1,0 +1,300 @@
+name: Sync FPF Commits
+
+on:
+  # Scheduled polling - runs daily at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * *'
+
+  # Manual trigger with optional parameters
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force sync even if no new commits'
+        required: false
+        default: 'false'
+        type: boolean
+      commit_count:
+        description: 'Number of recent commits to sync (0 = auto-detect new)'
+        required: false
+        default: '0'
+        type: number
+
+env:
+  UPSTREAM_REPO: 'ailev/FPF'
+  UPSTREAM_BRANCH: 'main'
+  SYNC_STATE_FILE: '.sync-state/last-synced-sha'
+
+jobs:
+  check-and-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    outputs:
+      has_new_commits: ${{ steps.check-commits.outputs.has_new_commits }}
+      new_commits_count: ${{ steps.check-commits.outputs.new_commits_count }}
+      commits_file: ${{ steps.check-commits.outputs.commits_file }}
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" || true
+          git fetch upstream "${UPSTREAM_BRANCH}"
+        env:
+          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
+          UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
+
+      - name: Check for new commits
+        id: check-commits
+        run: |
+          # Ensure sync state directory exists
+          mkdir -p .sync-state
+
+          # Get last synced SHA (or empty if first run)
+          LAST_SYNCED_SHA=""
+          if [ -f "${SYNC_STATE_FILE}" ]; then
+            LAST_SYNCED_SHA=$(cat "${SYNC_STATE_FILE}")
+            echo "Last synced SHA: $LAST_SYNCED_SHA"
+          else
+            echo "First sync - no previous state found"
+          fi
+
+          # Get latest upstream SHA
+          UPSTREAM_SHA=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
+          echo "Upstream SHA: $UPSTREAM_SHA"
+
+          # Check if force sync or commit count specified
+          if [ "${INPUT_COMMIT_COUNT}" != "0" ] && [ -n "${INPUT_COMMIT_COUNT}" ]; then
+            # Manual: sync specified number of commits
+            echo "Manual sync: fetching last ${INPUT_COMMIT_COUNT} commits"
+            COMMITS_TO_SYNC=$(git log "upstream/${UPSTREAM_BRANCH}" --oneline -n "${INPUT_COMMIT_COUNT}" --reverse --format="%H")
+            NEW_COMMITS_COUNT=${INPUT_COMMIT_COUNT}
+          elif [ -z "$LAST_SYNCED_SHA" ]; then
+            # First run: sync only the latest commit
+            echo "First sync: starting with latest commit only"
+            COMMITS_TO_SYNC=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
+            NEW_COMMITS_COUNT=1
+          elif [ "$LAST_SYNCED_SHA" == "$UPSTREAM_SHA" ] && [ "${INPUT_FORCE_SYNC}" != "true" ]; then
+            # No new commits
+            echo "No new commits to sync"
+            echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+            echo "new_commits_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            # Get commits since last sync
+            COMMITS_TO_SYNC=$(git log "${LAST_SYNCED_SHA}..upstream/${UPSTREAM_BRANCH}" --reverse --format="%H")
+            NEW_COMMITS_COUNT=$(echo "$COMMITS_TO_SYNC" | grep -c . || echo 0)
+            echo "Found $NEW_COMMITS_COUNT new commits since $LAST_SYNCED_SHA"
+          fi
+
+          if [ -z "$COMMITS_TO_SYNC" ] || [ "$NEW_COMMITS_COUNT" -eq 0 ]; then
+            echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+            echo "new_commits_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+          echo "new_commits_count=$NEW_COMMITS_COUNT" >> "$GITHUB_OUTPUT"
+
+          # Save commits to file (safer than passing through outputs for untrusted data)
+          echo "$COMMITS_TO_SYNC" > /tmp/commits-to-sync.txt
+
+          # Build JSON array of commit info and save to file
+          # Using jq for proper JSON escaping of untrusted commit messages
+          echo "[]" > /tmp/commits-info.json
+          for SHA in $COMMITS_TO_SYNC; do
+            SUBJECT=$(git log -1 --format="%s" "$SHA")
+            AUTHOR=$(git log -1 --format="%an" "$SHA")
+            DATE=$(git log -1 --format="%ci" "$SHA")
+
+            # Use jq to safely build JSON with proper escaping
+            jq --arg sha "$SHA" \
+               --arg subject "$SUBJECT" \
+               --arg author "$AUTHOR" \
+               --arg date "$DATE" \
+               '. += [{"sha": $sha, "subject": $subject, "author": $author, "date": $date}]' \
+               /tmp/commits-info.json > /tmp/commits-info.tmp.json
+            mv /tmp/commits-info.tmp.json /tmp/commits-info.json
+          done
+
+          echo "commits_file=/tmp/commits-info.json" >> "$GITHUB_OUTPUT"
+        env:
+          SYNC_STATE_FILE: ${{ env.SYNC_STATE_FILE }}
+          UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
+          INPUT_FORCE_SYNC: ${{ inputs.force_sync }}
+          INPUT_COMMIT_COUNT: ${{ inputs.commit_count }}
+
+      - name: Upload commits info artifact
+        if: steps.check-commits.outputs.has_new_commits == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: commits-info
+          path: |
+            /tmp/commits-to-sync.txt
+            /tmp/commits-info.json
+          retention-days: 1
+
+      - name: Cherry-pick commits
+        if: steps.check-commits.outputs.has_new_commits == 'true'
+        id: cherry-pick
+        run: |
+          # Read commits to sync from file
+          if [ ! -f /tmp/commits-to-sync.txt ]; then
+            echo "No commits file found"
+            exit 1
+          fi
+
+          COMMITS_TO_SYNC=$(cat /tmp/commits-to-sync.txt)
+          echo "Commits to cherry-pick:"
+          echo "$COMMITS_TO_SYNC"
+
+          SYNCED_SHAS=""
+
+          for SHA in $COMMITS_TO_SYNC; do
+            echo "Cherry-picking $SHA..."
+
+            if git cherry-pick --allow-empty -x "$SHA"; then
+              echo "Successfully cherry-picked $SHA"
+              SYNCED_SHAS="$SHA"
+            else
+              echo "::warning::Conflict cherry-picking $SHA - skipping"
+              git cherry-pick --abort || true
+              # Still update state to skip this problematic commit next time
+              SYNCED_SHAS="$SHA"
+            fi
+          done
+
+          # Update sync state with latest processed SHA
+          if [ -n "$SYNCED_SHAS" ]; then
+            LATEST_SHA=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
+            mkdir -p "$(dirname "${SYNC_STATE_FILE}")"
+            echo "$LATEST_SHA" > "${SYNC_STATE_FILE}"
+
+            git add "${SYNC_STATE_FILE}"
+            git commit -m "chore: update sync state to $LATEST_SHA" || true
+          fi
+
+          echo "synced=true" >> "$GITHUB_OUTPUT"
+        env:
+          SYNC_STATE_FILE: ${{ env.SYNC_STATE_FILE }}
+          UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
+
+      - name: Push changes
+        if: steps.cherry-pick.outputs.synced == 'true'
+        run: |
+          git push origin main
+
+  analyze-commits:
+    needs: check-and-sync
+    if: needs.check-and-sync.outputs.has_new_commits == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download commits info artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: commits-info
+          path: /tmp/
+
+      - name: Prepare analysis prompt
+        id: prepare-prompt
+        run: |
+          # Read commits info from file (properly escaped JSON)
+          COMMITS_JSON=$(cat /tmp/commits-info.json)
+          COMMITS_COUNT="${NEW_COMMITS_COUNT}"
+
+          # Create a safe prompt file
+          cat > /tmp/analysis-prompt.txt << 'PROMPT_EOF'
+          Analyze the commits synced from the upstream FPF repository.
+
+          Please provide:
+          1. A summary of the changes introduced
+          2. Key themes or areas affected
+          3. Any breaking changes or important notes
+          4. Recommendations for documentation updates if needed
+
+          Format the report as GitHub-flavored markdown suitable for an issue comment.
+          PROMPT_EOF
+
+          echo "Number of commits: $COMMITS_COUNT" >> /tmp/analysis-prompt.txt
+          echo "" >> /tmp/analysis-prompt.txt
+          echo "Commits data (JSON):" >> /tmp/analysis-prompt.txt
+          echo "$COMMITS_JSON" >> /tmp/analysis-prompt.txt
+
+          # Output the prompt file path
+          echo "prompt_file=/tmp/analysis-prompt.txt" >> "$GITHUB_OUTPUT"
+        env:
+          NEW_COMMITS_COUNT: ${{ needs.check-and-sync.outputs.new_commits_count }}
+
+      - name: Analyze commits with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            $(cat /tmp/analysis-prompt.txt)
+          claude_args: "--max-turns 3"
+
+      - name: Create sync report issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read commits info from file (properly escaped)
+            const commitsJson = fs.readFileSync('/tmp/commits-info.json', 'utf8');
+            const commits = JSON.parse(commitsJson);
+
+            // Sanitize commit data for display (escape any potential markdown injection)
+            const sanitize = (str) => str
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/\|/g, '\\|');
+
+            const commitList = commits.map(c =>
+              `- \`${c.sha.substring(0, 7)}\` ${sanitize(c.subject)} (${sanitize(c.author)})`
+            ).join('\n');
+
+            const upstreamRepo = process.env.UPSTREAM_REPO;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Sync Report] ${commits.length} commit(s) synced from upstream`,
+              body: `## Sync Summary
+
+            **Source:** [${upstreamRepo}](https://github.com/${upstreamRepo})
+            **Commits synced:** ${commits.length}
+            **Sync time:** ${new Date().toISOString()}
+
+            ### Commits
+            ${commitList}
+
+            ---
+            *This report was automatically generated by the FPF sync workflow.*
+            `,
+              labels: ['sync', 'automated']
+            });
+        env:
+          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
