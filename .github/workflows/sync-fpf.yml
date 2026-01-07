@@ -156,9 +156,35 @@ jobs:
               echo "Successfully cherry-picked $SHA"
               SYNCED_SHAS="$SHA"
             else
-              echo "::warning::Conflict cherry-picking $SHA - skipping"
-              git cherry-pick --abort || true
-              # Still update state to skip this problematic commit next time
+              echo "::warning::Conflict cherry-picking $SHA - resolving by keeping our version"
+
+              # For modify/delete conflicts: keep files deleted if we deleted them
+              # For other conflicts: accept our version (theirs changes are logged in commit message)
+              CONFLICTED_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+
+              if [ -n "$CONFLICTED_FILES" ]; then
+                for FILE in $CONFLICTED_FILES; do
+                  # Check if file exists in our HEAD (before cherry-pick started)
+                  if git ls-tree -r HEAD --name-only | grep -q "^${FILE}$"; then
+                    # File exists in our repo - keep our version
+                    git checkout --ours "$FILE" 2>/dev/null || true
+                    git add "$FILE" 2>/dev/null || true
+                  else
+                    # File was deleted in our repo - remove it
+                    git rm -f "$FILE" 2>/dev/null || true
+                  fi
+                done
+
+                # Complete the cherry-pick with resolved conflicts
+                git -c core.editor=true cherry-pick --continue || git cherry-pick --abort || true
+              else
+                # No unmerged files, just abort
+                git cherry-pick --abort || true
+              fi
+
+              # Clean up any leftover untracked files from failed cherry-picks
+              git clean -fd 2>/dev/null || true
+
               SYNCED_SHAS="$SHA"
             fi
           done
