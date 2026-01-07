@@ -1,0 +1,25 @@
+title: FPF Sync Reports
+description: Automated sync reports from ailev/FPF upstream repository
+theme: minima
+baseurl: "/fpf-wiki"
+url: "https://venikman.github.io"
+
+# Build settings
+markdown: kramdown
+permalink: /reports/:year/:month/:day/:title/
+
+# Collections for sync reports
+collections:
+  reports:
+    output: true
+    permalink: /reports/:year-:month-:day-:title/
+    sort_by: date
+    order: reverse
+
+# Default front matter
+defaults:
+  - scope:
+      path: ""
+      type: "reports"
+    values:
+      layout: "report"

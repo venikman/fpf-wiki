@@ -29,13 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-      issues: write
+      pages: write
 
     outputs:
       has_new_commits: ${{ steps.check-commits.outputs.has_new_commits }}
       new_commits_count: ${{ steps.check-commits.outputs.new_commits_count }}
-      commits_file: ${{ steps.check-commits.outputs.commits_file }}
 
     steps:
       - name: Checkout this repository
@@ -129,23 +127,11 @@ jobs:
                /tmp/commits-info.json > /tmp/commits-info.tmp.json
             mv /tmp/commits-info.tmp.json /tmp/commits-info.json
           done
-
-          echo "commits_file=/tmp/commits-info.json" >> "$GITHUB_OUTPUT"
         env:
           SYNC_STATE_FILE: ${{ env.SYNC_STATE_FILE }}
           UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
           INPUT_FORCE_SYNC: ${{ inputs.force_sync }}
           INPUT_COMMIT_COUNT: ${{ inputs.commit_count }}
-
-      - name: Upload commits info artifact
-        if: steps.check-commits.outputs.has_new_commits == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: commits-info
-          path: |
-            /tmp/commits-to-sync.txt
-            /tmp/commits-info.json
-          retention-days: 1
 
       - name: Cherry-pick commits
         if: steps.check-commits.outputs.has_new_commits == 'true'
@@ -192,110 +178,68 @@ jobs:
           SYNC_STATE_FILE: ${{ env.SYNC_STATE_FILE }}
           UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
 
+      - name: Generate sync report page
+        if: steps.cherry-pick.outputs.synced == 'true'
+        run: |
+          # Read commits info (already JSON-escaped by jq in previous step)
+          COMMITS_COUNT=$(jq length /tmp/commits-info.json)
+
+          # Generate date-based filename
+          SYNC_DATE=$(date -u +%Y-%m-%d)
+          SYNC_TIME=$(date -u +%H%M%S)
+          REPORT_FILE="docs/_reports/${SYNC_DATE}-sync-${SYNC_TIME}.md"
+
+          # Get first commit subject for summary (sanitized via jq)
+          FIRST_SUBJECT=$(jq -r '.[0].subject // "Sync update"' /tmp/commits-info.json | head -c 100)
+
+          # Ensure reports directory exists
+          mkdir -p docs/_reports
+
+          # Generate the report markdown file using heredoc with variables
+          # Note: All commit data is safely escaped through jq
+          cat > "$REPORT_FILE" << REPORT_EOF
+---
+layout: report
+title: "Sync Report - ${SYNC_DATE}"
+date: $(date -u +%Y-%m-%dT%H:%M:%S+00:00)
+commits_count: ${COMMITS_COUNT}
+summary: "$(echo "$FIRST_SUBJECT" | sed 's/"/\\"/g')"
+---
+
+## Sync Summary
+
+**Source:** [${UPSTREAM_REPO}](https://github.com/${UPSTREAM_REPO})
+**Commits synced:** ${COMMITS_COUNT}
+**Sync time:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+## Commits
+
+| SHA | Message | Author |
+|-----|---------|--------|
+REPORT_EOF
+
+          # Add each commit as a table row (using jq to safely extract and format)
+          # jq handles all escaping of untrusted commit message content
+          jq -r '.[] | "| `\(.sha[0:7])` | \(.subject | gsub("[|]"; "\\|") | gsub("[\n\r]"; " ")) | \(.author) |"' /tmp/commits-info.json >> "$REPORT_FILE"
+
+          # Add footer
+          cat >> "$REPORT_FILE" << FOOTER_EOF
+
+---
+
+*View the full changes on [GitHub](https://github.com/${UPSTREAM_REPO}/commits/${UPSTREAM_BRANCH})*
+FOOTER_EOF
+
+          echo "Generated report: $REPORT_FILE"
+
+          # Stage the new report
+          git add docs/_reports/
+          git commit -m "docs: add sync report for ${SYNC_DATE}" || true
+        env:
+          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
+          UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
+
       - name: Push changes
         if: steps.cherry-pick.outputs.synced == 'true'
         run: |
           git push origin main
-
-  analyze-commits:
-    needs: check-and-sync
-    if: needs.check-and-sync.outputs.has_new_commits == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download commits info artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: commits-info
-          path: /tmp/
-
-      - name: Prepare analysis prompt
-        id: prepare-prompt
-        run: |
-          # Read commits info from file (properly escaped JSON)
-          COMMITS_JSON=$(cat /tmp/commits-info.json)
-          COMMITS_COUNT="${NEW_COMMITS_COUNT}"
-
-          # Create a safe prompt file
-          cat > /tmp/analysis-prompt.txt << 'PROMPT_EOF'
-          Analyze the commits synced from the upstream FPF repository.
-
-          Please provide:
-          1. A summary of the changes introduced
-          2. Key themes or areas affected
-          3. Any breaking changes or important notes
-          4. Recommendations for documentation updates if needed
-
-          Format the report as GitHub-flavored markdown suitable for an issue comment.
-          PROMPT_EOF
-
-          echo "Number of commits: $COMMITS_COUNT" >> /tmp/analysis-prompt.txt
-          echo "" >> /tmp/analysis-prompt.txt
-          echo "Commits data (JSON):" >> /tmp/analysis-prompt.txt
-          echo "$COMMITS_JSON" >> /tmp/analysis-prompt.txt
-
-          # Output the prompt file path
-          echo "prompt_file=/tmp/analysis-prompt.txt" >> "$GITHUB_OUTPUT"
-        env:
-          NEW_COMMITS_COUNT: ${{ needs.check-and-sync.outputs.new_commits_count }}
-
-      - name: Analyze commits with Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
-          prompt: |
-            $(cat /tmp/analysis-prompt.txt)
-          claude_args: "--max-turns 3"
-
-      - name: Create sync report issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-
-            // Read commits info from file (properly escaped)
-            const commitsJson = fs.readFileSync('/tmp/commits-info.json', 'utf8');
-            const commits = JSON.parse(commitsJson);
-
-            // Sanitize commit data for display (escape any potential markdown injection)
-            const sanitize = (str) => str
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/\|/g, '\\|');
-
-            const commitList = commits.map(c =>
-              `- \`${c.sha.substring(0, 7)}\` ${sanitize(c.subject)} (${sanitize(c.author)})`
-            ).join('\n');
-
-            const upstreamRepo = process.env.UPSTREAM_REPO;
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[Sync Report] ${commits.length} commit(s) synced from upstream`,
-              body: `## Sync Summary
-
-            **Source:** [${upstreamRepo}](https://github.com/${upstreamRepo})
-            **Commits synced:** ${commits.length}
-            **Sync time:** ${new Date().toISOString()}
-
-            ### Commits
-            ${commitList}
-
-            ---
-            *This report was automatically generated by the FPF sync workflow.*
-            `,
-              labels: ['sync', 'automated']
-            });
-        env:
-          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
