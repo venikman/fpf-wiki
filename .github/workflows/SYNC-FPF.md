@@ -84,9 +84,13 @@ This workflow automatically synchronizes commits from the upstream FPF repositor
 
 ### Conflict Resolution Strategy
 
+During cherry-pick operations, conflicts are resolved as follows:
+
 - **File exists locally**: Keep our version (`git checkout --ours`)
 - **File deleted locally**: Respect deletion (`git rm`)
 - **Cleanup**: Remove untracked files from failed cherry-picks
+
+> **Implementation:** See [`sync-fpf.yml`](sync-fpf.yml) for the full workflow code.
 
 ## Quality Assessment
 
@@ -166,6 +170,8 @@ gh run list --workflow=sync-fpf.yml --limit=30 --json createdAt,updatedAt \
 Sync reports are published to GitHub Pages at:
 - `/fpf-wiki/reports/` (index)
 - `/fpf-wiki/reports/YYYY-MM-DD-sync-HHMMSS/` (individual reports)
+
+> **Prerequisite:** GitHub Pages must be enabled in repository settings with source set to the `docs/` directory.
 
 ## Files Modified
 
