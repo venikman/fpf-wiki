@@ -11,6 +11,8 @@
 
 ## Quick Reference
 
+> **Note:** Commands below require the [GitHub CLI (`gh`)](https://cli.github.com/) to be installed and authenticated.
+
 ### Sync FPF Workflow
 
 ```bash
