@@ -29,7 +29,7 @@ This workflow implements a **ChatOps pattern** where AI assistance is triggered 
 | **ChatOps** | Conversation-driven operations | [ChatOps Overview](https://www.atlassian.com/blog/software-teams/what-is-chatops-adoption-guide) |
 | **Event-Driven Automation** | Responds to GitHub webhook events | [GitHub Actions Events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) |
 | **Expression-Based Filtering** | Uses `contains()` in job conditions | [GitHub Actions Expressions](https://docs.github.com/en/actions/learn-github-actions/expressions) |
-| **OAuth Token Auth** | Secure API authentication | [OIDC for GitHub Actions](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect) |
+| **Secret-Based Auth** | OAuth token stored in repository secrets | [Encrypted Secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions) |
 | **Turn Limiting** | Prevents runaway conversations | Custom rate limiting |
 
 ### Alternative Approaches Considered
@@ -122,7 +122,7 @@ This workflow enables AI-assisted code review and issue response by invoking Cla
 
 - Trigger condition uses `contains()` GitHub expression (safe from injection)
 - OAuth token stored in secrets (not exposed)
-- Comment at line 20 documents the safety design choice
+- Workflow includes inline comment explaining the injection-safe design
 - No shell interpolation of user-provided content
 
 ## Plans to Change
@@ -202,6 +202,7 @@ Track via GitHub API:
 
 ## Related Documentation
 
+- [Workflows Index](../WORKFLOWS.md) - Central hub for all workflow docs
 - [Claude Code Action](https://github.com/anthropics/claude-code-action)
 - [Claude Code Documentation](https://docs.anthropic.com/claude-code)
 - [GitHub Actions Events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows)

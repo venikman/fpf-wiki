@@ -52,7 +52,7 @@ This workflow implements a **cherry-pick-based fork synchronization** pattern ra
 | Attribute | Value |
 |-----------|-------|
 | **Status** | Active |
-| **Last Updated** | 2026-01-08 (commit a7aa4d0) |
+| **Last Updated** | 2026-01-08 |
 | **Stability** | Production |
 | **Health** | Healthy |
 
@@ -184,6 +184,7 @@ Sync reports are published to GitHub Pages at:
 
 ## Related Documentation
 
+- [Workflows Index](../WORKFLOWS.md) - Central hub for all workflow docs
 - [FPF Upstream Repository](https://github.com/ailev/FPF)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Cherry-pick Documentation](https://git-scm.com/docs/git-cherry-pick)
