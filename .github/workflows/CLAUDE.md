@@ -43,7 +43,7 @@ This workflow implements a **ChatOps pattern** where AI assistance is triggered 
 
 ### Security Model
 
-```
+```text
 User Comment → GitHub Webhook → Actions Expression Filter → Claude Code Action
                                       ↓
                               contains('@claude')?

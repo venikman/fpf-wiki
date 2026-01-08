@@ -13,7 +13,7 @@
 
 ### Sync FPF Workflow
 
-```yaml
+```bash
 # Manual trigger with options
 gh workflow run sync-fpf.yml -f force_sync=true -f commit_count=5
 ```
@@ -25,7 +25,7 @@ gh workflow run sync-fpf.yml -f force_sync=true -f commit_count=5
 
 ### Claude Code Workflow
 
-```yaml
+```text
 # Trigger by mentioning in any issue/PR comment:
 @claude <your question or request>
 ```
@@ -37,8 +37,8 @@ gh workflow run sync-fpf.yml -f force_sync=true -f commit_count=5
 
 | Workflow | Status | Last Run | Success Rate |
 |----------|--------|----------|--------------|
-| Sync FPF | ![Sync Status](https://github.com/venikman/fpf-wiki/actions/workflows/sync-fpf.yml/badge.svg) | Check Actions tab | TBD |
-| Claude Code | ![Claude Status](https://github.com/venikman/fpf-wiki/actions/workflows/claude.yml/badge.svg) | Check Actions tab | TBD |
+| Sync FPF | ![Sync Status](https://github.com/venikman/fpf-wiki/actions/workflows/sync-fpf.yml/badge.svg) | [View Runs](https://github.com/venikman/fpf-wiki/actions/workflows/sync-fpf.yml) | TBD |
+| Claude Code | ![Claude Status](https://github.com/venikman/fpf-wiki/actions/workflows/claude.yml/badge.svg) | [View Runs](https://github.com/venikman/fpf-wiki/actions/workflows/claude.yml) | TBD |
 
 ## Troubleshooting
 
@@ -89,7 +89,7 @@ If sync gets stuck or you need to re-sync from a specific point:
 git log upstream/main --oneline -20
 
 # 2. Update the state file locally
-echo "COMMIT_SHA_HERE" > .sync-state/last-synced-sha
+echo "<COMMIT_SHA_TO_SYNC_FROM>" > .sync-state/last-synced-sha
 
 # 3. Commit and push
 git add .sync-state/last-synced-sha

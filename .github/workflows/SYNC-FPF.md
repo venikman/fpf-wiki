@@ -6,7 +6,7 @@
 
 ### Pipeline Pattern: Cherry-Pick Fork Sync
 
-This workflow implements a **cherry-pick based fork synchronization** pattern rather than merge or rebase strategies.
+This workflow implements a **cherry-pick-based fork synchronization** pattern rather than merge or rebase strategies.
 
 | Approach | Pros | Cons | Used Here? |
 |----------|------|------|------------|
