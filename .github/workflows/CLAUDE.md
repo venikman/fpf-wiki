@@ -2,6 +2,66 @@
 
 > Documentation for `.github/workflows/claude.yml`
 
+## Methodology & References
+
+### Pipeline Pattern: ChatOps via @Mention
+
+This workflow implements a **ChatOps pattern** where AI assistance is triggered by `@claude` mentions in GitHub conversations.
+
+| Approach | Pros | Cons | Used Here? |
+|----------|------|------|------------|
+| **Auto-review on PR** | No manual trigger needed | May be noisy, runs on every PR | No |
+| **Slash commands** | Explicit intent, multiple commands | Requires parsing, more complex | No |
+| **@Mention trigger** | Natural language, contextual | Single trigger mechanism | **Yes** |
+| **Manual workflow dispatch** | Full control | Breaks conversation flow | No |
+
+### Why @Mention Trigger?
+
+1. **Natural Interaction**: Users ask questions as they would to a human reviewer
+2. **Contextual**: Claude sees the full issue/PR context automatically
+3. **Opt-in**: Only runs when explicitly requested (not every PR)
+4. **Conversational**: Supports back-and-forth dialogue within same thread
+
+### Design Patterns Used
+
+| Pattern | Description | Reference |
+|---------|-------------|-----------|
+| **ChatOps** | Conversation-driven operations | [ChatOps Overview](https://www.atlassian.com/blog/software-teams/what-is-chatops-adoption-guide) |
+| **Event-Driven Automation** | Responds to GitHub webhook events | [GitHub Actions Events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) |
+| **Expression-Based Filtering** | Uses `contains()` in job conditions | [GitHub Actions Expressions](https://docs.github.com/en/actions/learn-github-actions/expressions) |
+| **OAuth Token Auth** | Secure API authentication | [OIDC for GitHub Actions](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect) |
+| **Turn Limiting** | Prevents runaway conversations | Custom rate limiting |
+
+### Alternative Approaches Considered
+
+| Alternative | Why Not Used |
+|-------------|--------------|
+| Auto-review all PRs | Too noisy, higher API costs, not always needed |
+| Slash commands (`/review`) | More complex parsing, less natural |
+| Separate bot application | Higher maintenance, separate auth flow |
+| Manual workflow dispatch | Breaks conversational flow |
+
+### Security Model
+
+```
+User Comment → GitHub Webhook → Actions Expression Filter → Claude Code Action
+                                      ↓
+                              contains('@claude')?
+                                   ↓    ↓
+                                 Yes    No
+                                  ↓      ↓
+                            Run Job   Skip
+```
+
+The `contains()` function is a GitHub Actions expression evaluated before shell execution, preventing injection attacks from malicious comment content.
+
+### References
+
+- [Claude Code Action (Official)](https://github.com/anthropics/claude-code-action)
+- [ChatOps: Putting Tools in the Middle of Conversation](https://www.pagerduty.com/blog/what-is-chatops/)
+- [GitHub Actions Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [GitHub Webhook Events](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+
 ## Current State
 
 | Attribute | Value |

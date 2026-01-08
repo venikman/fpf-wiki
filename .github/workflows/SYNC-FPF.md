@@ -2,6 +2,51 @@
 
 > Documentation for `.github/workflows/sync-fpf.yml`
 
+## Methodology & References
+
+### Pipeline Pattern: Cherry-Pick Fork Sync
+
+This workflow implements a **cherry-pick based fork synchronization** pattern rather than merge or rebase strategies.
+
+| Approach | Pros | Cons | Used Here? |
+|----------|------|------|------------|
+| **Merge** | Preserves full history | Creates merge commits, complex history | No |
+| **Rebase** | Linear history | Rewrites history, force-push required | No |
+| **Cherry-pick** | Selective commits, preserves local changes | Individual commit handling | **Yes** |
+
+### Why Cherry-Pick?
+
+1. **Local Modifications Preserved**: Fork maintains custom files/changes not in upstream
+2. **Conflict Control**: Each commit handled individually with explicit resolution
+3. **Audit Trail**: `-x` flag adds upstream reference to each cherry-picked commit
+4. **No Force Push**: Avoids destructive history rewrites on main branch
+
+### Design Patterns Used
+
+| Pattern | Description | Reference |
+|---------|-------------|-----------|
+| **State File Tracking** | Persists last-synced SHA to detect new commits | Custom implementation |
+| **Idempotent Sync** | Safe to re-run without side effects | [Idempotency Patterns](https://docs.github.com/en/actions/using-workflows/reusing-workflows#reusable-workflows-best-practices) |
+| **Scheduled + Manual Trigger** | Combines automation with manual override | [GitHub Actions Triggers](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) |
+| **Conflict Resolution: Ours-First** | Prioritizes local state over upstream on conflict | [Git Merge Strategies](https://git-scm.com/docs/merge-strategies) |
+| **Safe JSON Construction** | Uses `jq` for untrusted data escaping | [Command Injection Prevention](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections) |
+
+### Alternative Approaches Considered
+
+| Alternative | Why Not Used |
+|-------------|--------------|
+| GitHub's "Sync fork" button | No automation, no conflict resolution control |
+| `git merge upstream/main` | Creates merge commits, harder to track individual changes |
+| `git rebase` | Requires force-push, risky for shared branches |
+| Third-party sync actions | Less control over conflict resolution, dependency risk |
+
+### References
+
+- [Git Cherry-Pick Documentation](https://git-scm.com/docs/git-cherry-pick)
+- [GitHub Actions Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [Fork Sync Strategies (Atlassian)](https://www.atlassian.com/git/tutorials/git-forks-and-upstreams)
+- [Keeping a Fork Updated (GitHub Docs)](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
+
 ## Current State
 
 | Attribute | Value |
