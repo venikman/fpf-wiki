@@ -24,6 +24,11 @@ env:
   UPSTREAM_BRANCH: 'main'
   SYNC_STATE_FILE: '.sync-state/last-synced-sha'
 
+# Prevent concurrent syncs which could cause conflicts
+concurrency:
+  group: sync-fpf
+  cancel-in-progress: false
+
 jobs:
   check-and-sync:
     runs-on: ubuntu-latest
@@ -50,7 +55,21 @@ jobs:
       - name: Add upstream remote
         run: |
           git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" || true
-          git fetch upstream "${UPSTREAM_BRANCH}"
+
+          # Retry fetch with exponential backoff
+          for i in 1 2 3 4; do
+            if git fetch upstream "${UPSTREAM_BRANCH}"; then
+              echo "Fetch successful"
+              break
+            fi
+            if [ $i -eq 4 ]; then
+              echo "::error::Failed to fetch upstream after 4 attempts"
+              exit 1
+            fi
+            DELAY=$((2 ** i))
+            echo "Fetch failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+          done
         env:
           UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
           UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
@@ -154,7 +173,7 @@ jobs:
 
             if git cherry-pick --allow-empty -x "$SHA"; then
               echo "Successfully cherry-picked $SHA"
-              SYNCED_SHAS="$SHA"
+              SYNCED_SHAS="${SYNCED_SHAS} ${SHA}"
             else
               echo "::warning::Conflict cherry-picking $SHA - resolving by keeping our version"
 
@@ -162,10 +181,12 @@ jobs:
               # For other conflicts: accept our version (theirs changes are logged in commit message)
               CONFLICTED_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
 
+              CONFLICT_RESOLVED=false
               if [ -n "$CONFLICTED_FILES" ]; then
                 for FILE in $CONFLICTED_FILES; do
                   # Check if file exists in our HEAD (before cherry-pick started)
-                  if git ls-tree -r HEAD --name-only | grep -q "^${FILE}$"; then
+                  # Use -F for fixed string matching (no regex interpretation)
+                  if git ls-tree -r HEAD --name-only | grep -Fxq "$FILE"; then
                     # File exists in our repo - keep our version
                     git checkout --ours "$FILE" 2>/dev/null || true
                     git add "$FILE" 2>/dev/null || true
@@ -176,16 +197,26 @@ jobs:
                 done
 
                 # Complete the cherry-pick with resolved conflicts
-                git -c core.editor=true cherry-pick --continue || git cherry-pick --abort || true
+                if git -c core.editor=true cherry-pick --continue; then
+                  CONFLICT_RESOLVED=true
+                else
+                  echo "::warning::Failed to continue cherry-pick, aborting"
+                  git cherry-pick --abort 2>/dev/null || true
+                fi
               else
                 # No unmerged files, just abort
-                git cherry-pick --abort || true
+                git cherry-pick --abort 2>/dev/null || true
               fi
 
               # Clean up any leftover untracked files from failed cherry-picks
               git clean -fd 2>/dev/null || true
 
-              SYNCED_SHAS="$SHA"
+              # Only mark as synced if conflict was actually resolved
+              if [ "$CONFLICT_RESOLVED" = true ]; then
+                SYNCED_SHAS="${SYNCED_SHAS} ${SHA}"
+              else
+                echo "::warning::Skipped $SHA due to unresolved conflict"
+              fi
             fi
           done
 
@@ -268,4 +299,17 @@ FOOTER_EOF
       - name: Push changes
         if: steps.cherry-pick.outputs.synced == 'true'
         run: |
-          git push origin main
+          # Retry push with exponential backoff
+          for i in 1 2 3 4; do
+            if git push origin main; then
+              echo "Push successful"
+              exit 0
+            fi
+            if [ $i -eq 4 ]; then
+              echo "::error::Failed to push after 4 attempts"
+              exit 1
+            fi
+            DELAY=$((2 ** i))
+            echo "Push failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+          done
