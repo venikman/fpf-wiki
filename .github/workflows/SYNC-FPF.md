@@ -76,11 +76,11 @@ This workflow automatically synchronizes commits from the upstream FPF repositor
 
 1. **Checkout** - Full history clone with write permissions
 2. **Configure Git** - Sets bot identity for commits
-3. **Add Upstream** - Connects to `ailev/FPF` repository
+3. **Add Upstream** - Connects to `ailev/FPF` repository (with retry)
 4. **Check Commits** - Compares `.sync-state/last-synced-sha` with upstream HEAD
 5. **Cherry-pick** - Applies new commits with conflict resolution
 6. **Generate Report** - Creates timestamped markdown report in `docs/_reports/`
-7. **Push** - Commits all changes to `main` branch
+7. **Push** - Commits all changes to `main` branch (with retry)
 
 ### Conflict Resolution Strategy
 
@@ -103,12 +103,13 @@ During cherry-pick operations, conflicts are resolved as follows:
 | **Conflict Handling** | Good | Automated resolution preserves local modifications |
 | **Auditability** | Good | Generates Jekyll reports for each sync |
 | **Permissions** | Good | Scoped to `contents:write` and `pages:write` only |
+| **Concurrency** | Good | Prevents parallel runs with `concurrency` group |
+| **Error Recovery** | Good | Retry logic with exponential backoff for fetch/push |
 
 ### Weaknesses
 
 | Area | Rating | Notes |
 |------|--------|-------|
-| **Error Recovery** | Needs Work | No retry logic for network failures |
 | **Notifications** | Missing | No alerts on sync failure |
 | **Branch Protection** | Missing | Pushes directly to main without PR review |
 | **Rollback** | Missing | No automated way to undo bad syncs |
@@ -123,7 +124,8 @@ During cherry-pick operations, conflicts are resolved as follows:
 
 ### Short-term (Next Sprint)
 
-- [ ] Add retry logic with exponential backoff for git push/fetch
+- [x] Add retry logic with exponential backoff for git push/fetch
+- [x] Add concurrency control to prevent parallel runs
 - [ ] Add Slack/email notification on sync failure
 - [ ] Add dry-run mode to preview changes without applying
 

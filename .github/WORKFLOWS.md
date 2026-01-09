@@ -51,7 +51,8 @@ gh workflow run sync-fpf.yml -f force_sync=true -f commit_count=5
 | Sync not running | Schedule disabled on forks | Manually trigger or enable Actions |
 | Conflicts every run | Divergent local changes | Review conflict resolution strategy |
 | No commits synced | Already up-to-date | Use `force_sync=true` to verify |
-| Push fails | Token permissions | Check `GITHUB_TOKEN` has write access |
+| Push fails after retries | Token permissions or network | Check `GITHUB_TOKEN` has write access (retries 4x automatically) |
+| Fetch fails after retries | Network or upstream issue | Check upstream repo accessibility (retries 4x automatically) |
 
 ### Claude Code Issues
 
@@ -113,6 +114,14 @@ gh workflow run claude.yml
 ```
 
 ## Changelog
+
+### 2026-01-09
+- Improved sync-fpf.yml reliability:
+  - Added concurrency control to prevent parallel runs
+  - Added retry logic with exponential backoff for fetch/push
+  - Fixed SYNCED_SHAS tracking bug
+  - Fixed false success on cherry-pick abort
+  - Fixed regex injection risk in file matching
 
 ### 2026-01-08
 - Added workflow documentation (SYNC-FPF.md, CLAUDE.md)
