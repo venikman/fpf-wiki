@@ -55,21 +55,7 @@ jobs:
       - name: Add upstream remote
         run: |
           git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" || true
-
-          # Retry fetch with exponential backoff
-          for i in 1 2 3 4; do
-            if git fetch upstream "${UPSTREAM_BRANCH}"; then
-              echo "Fetch successful"
-              break
-            fi
-            if [ $i -eq 4 ]; then
-              echo "::error::Failed to fetch upstream after 4 attempts"
-              exit 1
-            fi
-            DELAY=$((2 ** i))
-            echo "Fetch failed, retrying in ${DELAY}s..."
-            sleep $DELAY
-          done
+          git fetch upstream "${UPSTREAM_BRANCH}"
         env:
           UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
           UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
@@ -298,18 +284,4 @@ FOOTER_EOF
 
       - name: Push changes
         if: steps.cherry-pick.outputs.synced == 'true'
-        run: |
-          # Retry push with exponential backoff
-          for i in 1 2 3 4; do
-            if git push origin main; then
-              echo "Push successful"
-              exit 0
-            fi
-            if [ $i -eq 4 ]; then
-              echo "::error::Failed to push after 4 attempts"
-              exit 1
-            fi
-            DELAY=$((2 ** i))
-            echo "Push failed, retrying in ${DELAY}s..."
-            sleep $DELAY
-          done
+        run: git push origin main

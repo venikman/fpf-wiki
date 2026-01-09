@@ -76,11 +76,11 @@ This workflow automatically synchronizes commits from the upstream FPF repositor
 
 1. **Checkout** - Full history clone with write permissions
 2. **Configure Git** - Sets bot identity for commits
-3. **Add Upstream** - Connects to `ailev/FPF` repository (with retry)
-4. **Check Commits** - Compares `.sync-state/last-synced-sha` with upstream HEAD
-5. **Cherry-pick** - Applies new commits with conflict resolution
+3. **Add Upstream** - Connects to `ailev/FPF` and fetches latest
+4. **Check Commits** - Reads last-synced SHA, compares with upstream, builds list of new commits
+5. **Cherry-pick** - Applies new commits one-by-one with conflict resolution
 6. **Generate Report** - Creates timestamped markdown report in `docs/_reports/`
-7. **Push** - Commits all changes to `main` branch (with retry)
+7. **Push** - Commits all changes to `main` branch
 
 ### Conflict Resolution Strategy
 
@@ -104,7 +104,6 @@ During cherry-pick operations, conflicts are resolved as follows:
 | **Auditability** | Good | Generates Jekyll reports for each sync |
 | **Permissions** | Good | Scoped to `contents:write` and `pages:write` only |
 | **Concurrency** | Good | Prevents parallel runs with `concurrency` group |
-| **Error Recovery** | Good | Retry logic with exponential backoff for fetch/push |
 
 ### Weaknesses
 
@@ -124,7 +123,6 @@ During cherry-pick operations, conflicts are resolved as follows:
 
 ### Short-term (Next Sprint)
 
-- [x] Add retry logic with exponential backoff for git push/fetch
 - [x] Add concurrency control to prevent parallel runs
 - [ ] Add Slack/email notification on sync failure
 - [ ] Add dry-run mode to preview changes without applying
